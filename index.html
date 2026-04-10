@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taro - Free Hosting</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:  #2eb872;
+      --red:    #e84040;
+      --orange: #f97316;
+      --light:  #f5f7f2;
+      --white:  #ffffff;
+      --text:   #1a1a1a;
+      --muted:  #888;
+    }
+
+    body {
+      background: var(--light);
+      font-family: 'Nunito', sans-serif;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    * { border: none; }
+
+    button {
+      height: 35px !important;
+      width: 60px !important;
+      font-size: 15px;
+      border-radius: 3px;
+      border: 2px solid !important;
+      border-image-source: linear-gradient(to right, red, orange) !important;
+      border-image-slice: 1 !important;
+      background: white !important;
+      cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+    }
+
+    #log {
+      border: 2px solid !important;
+      border-image-source: linear-gradient(to right, green 0%, lime 100%) !important;
+      border-image-slice: 1 !important;
+      background: white !important;
+    }
+
+    #buttons {
+      position: absolute;
+      top: 0;
+      width: 33%;
+      right: 0;
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: flex-start;
+      gap: 5px;
+    }
+
+    nav {
+      height: 40px;
+      width: 100%;
+      border-bottom: 2px solid black;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
+    }
+
+    body { padding-top: 40px; }
+
+    #logo {
+      width: 10%;
+      height: auto;
+      font-size: 30px;
+      font-family: Georgia, 'Times New Roman', Times, serif;
+      line-height: 40px;
+      padding-left: 10px;
+    }
+
+    #nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1.5rem;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 9999;
+    }
+
+    .shape {
+      position: absolute;
+      opacity: .13;
+      pointer-events: none;
+    }
+
+    .s1 { width: 320px; height: 320px; border-radius: 50%; background: var(--green); top: -80px; left: -100px; }
+    .s2 { width: 200px; height: 200px; background: var(--orange); top: 60px; right: -60px; border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+    .s3 { width: 140px; height: 140px; background: var(--red); bottom: 40px; left: 10%; transform: rotate(45deg); border-radius: 20px; }
+    .s4 { width: 90px; height: 90px; border-radius: 50%; background: var(--orange); bottom: 80px; right: 8%; }
+
+    #hero {
+      position: relative;
+      min-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 5rem 1.5rem 4rem;
+      overflow: hidden;
+      background: var(--white);
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      background: #e8f8ef;
+      color: var(--green);
+      border: 1.5px solid #a8e6c3 !important;
+      border-radius: 100px;
+      padding: .35rem 1.1rem;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      margin-bottom: 1.8rem;
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 7vw, 4.5rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -.02em;
+      margin-bottom: 2.2rem;
+    }
+
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(100deg, var(--red), var(--orange));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .btn-start {
+      background: linear-gradient(120deg, blue, #9400FF) !important;
+      color: white !important;
+      border: none !important;
+      border-image: none !important;
+      border-radius: 14px !important;
+      padding: .9rem 2.6rem !important;
+      font-size: 1.05rem !important;
+      font-weight: 900 !important;
+      cursor: pointer !important;
+      box-shadow: 0 6px 24px rgba(46,184,114,.25) !important;
+      width: 40% !important;
+      height: auto !important;
+    }
+
+    #features { padding: 4rem 1.5rem; max-width: 700px; margin: 0 auto; }
+    .feat-grid { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; }
+    .feat-card {
+      background: var(--white);
+      border-radius: 20px;
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      position: relative;
+    }
+    .feat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 20px 20px 0 0;
+      background: var(--bar, var(--green));
+    }
+
+    #signer, #loger {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--white);
+      padding: 2.5rem 2rem;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+      z-index: 10001;
+      width: 90%;
+      max-width: 380px;
+      border: 1px solid rgba(46,184,114,0.2) !important;
+    }
+
+    #overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+    }
+
+    .input-group { margin-bottom: 1.2rem; position: relative; }
+
+    input {
+      width: 100%;
+      padding: 0.9rem 1.2rem;
+      border: 1.5px solid #eee !important;
+      border-image: none !important;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+      height: auto !important;
+      width: 100% !important;
+    }
+
+    input:focus { border-color: var(--green) !important; outline: none; }
+
+    .pass-box i {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .btn-primary {
+      width: 100% !important;
+background: linear-gradient(120deg, blue, #9400FF) !important;
+      color: black !important;
+      border: none !important;
+      border-image: none !important;
+      padding: 1rem !important;
+      border-radius: 12px !important;
+      font-weight: 900 !important;
+      cursor: pointer !important;
+      height: auto !important;
+      font-size: 1rem !important;
+    }
+
+    .btn-close {
+      position: absolute;
+      top: 15px; right: 15px;
+      background: #f0f0f0 !important;
+      border: none !important;
+      border-image: none !important;
+      width: 30px !important;
+      height: 30px !important;
+      border-radius: 50% !important;
+      cursor: pointer !important;
+      font-size: 16px !important;
+    }
+
+    .form-link { text-align: center; margin-top: 1.2rem; font-size: 0.9rem; }
+    .form-link span { color: var(--green); cursor: pointer; font-weight: 700; }
+    .forgot { text-align: right; margin-top: -0.5rem; margin-bottom: 1rem; font-size: 0.8rem; }
+
+    footer { padding: 2rem; text-align: center; background: var(--white); border-top: 1px solid #eee; display: flex; justify-content: center; align-items: center; gap: 1.2rem; }
+    footer a { color: var(--text); font-size: 1.3rem; text-decoration: none; transition: color 0.2s; }
+    footer a:hover { color: var(--green); }
+
+    #dashboard-view {
+      display: none;
+      min-height: calc(100vh - 40px);
+      padding: 2rem 1.5rem;
+      background: var(--light);
+    }
+
+    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .dash-header h2 { font-size: 1.6rem; font-weight: 900; }
+
+    .btn-new-project {
+      width: auto !important;
+      height: auto !important;
+      padding: .5rem 1.2rem !important;
+      background: var(--text) !important;
+      color: white !important;
+      border: none !important;
+      border-image: none !important;
+      border-radius: 10px !important;
+      font-weight: 700 !important;
+      font-size: .95rem !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: .4rem !important;
+    }
+
+    .album-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .project-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 1.2rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+
+    .project-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+
+    .project-card-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+background: linear-gradient(120deg, blue, #9400FF) !important;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 1.1rem; margin-bottom: .8rem;
+    }
+
+    .project-card h3 { font-size: 1rem; font-weight: 900; margin-bottom: .2rem; word-break: break-all; }
+    .project-card p { font-size: .75rem; color: var(--muted); }
+
+    .card-actions { display: flex; gap: .4rem; margin-top: .8rem; }
+    .card-btn {
+      flex: 1;
+      height: 28px !important;
+      width: auto !important;
+      font-size: .75rem !important;
+      border-radius: 6px !important;
+      padding: 0 .5rem !important;
+    }
+    .card-btn-edit {
+      background: var(--text) !important;
+      color: white !important;
+      border: none !important;
+      border-image: none !important;
+    }
+    .card-btn-del {
+      background: white !important;
+      color: var(--red) !important;
+      border: 1.5px solid var(--red) !important;
+      border-image: none !important;
+    }
+    .card-btn-view {
+      background: var(--green) !important;
+      color: white !important;
+      border: none !important;
+      border-image: none !important;
+    }
+
+    .empty-state { text-align: center; padding: 4rem 1rem; color: var(--muted); }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+
+    #editor-view {
+      display: none;
+      height: calc(100vh - 40px);
+      background: #1e1e2e;
+      flex-direction: column;
+    }
+
+    .editor-topbar {
+      height: 42px;
+      background: #181825;
+      border-bottom: 1px solid #313244;
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      gap: .6rem;
+      flex-shrink: 0;
+    }
+
+    .editor-topbar-title {
+      color: #cdd6f4;
+      font-weight: 700;
+      font-size: .95rem;
+      flex: 1;
+    }
+
+    .editor-topbar-title span { color: #a6e3a1; }
+
+    .etb-btn {
+      height: 28px !important;
+      width: auto !important;
+      padding: 0 .8rem !important;
+      font-size: .78rem !important;
+      border-radius: 6px !important;
+      font-weight: 700 !important;
+    }
+
+    .etb-run {
+      background: #a6e3a1 !important;
+      color: #1e1e2e !important;
+      border: none !important;
+      border-image: none !important;
+    }
+
+    .etb-save {
+      background: #89b4fa !important;
+      color: #1e1e2e !important;
+      border: none !important;
+      border-image: none !important;
+    }
+
+    .etb-back {
+      background: #313244 !important;
+      color: #cdd6f4 !important;
+      border: none !important;
+      border-image: none !important;
+    }
+
+    .etb-addfile {
+      background: #fab387 !important;
+      color: #1e1e2e !important;
+      border: none !important;
+      border-image: none !important;
+    }
+
+    .editor-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .editor-sidebar {
+      width: 180px;
+      background: #181825;
+      border-right: 1px solid #313244;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: .5rem .8rem;
+      font-size: .7rem;
+      color: #6c7086;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      border-bottom: 1px solid #313244;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar-add-btn {
+      background: none !important;
+      border: none !important;
+      border-image: none !important;
+      color: #6c7086 !important;
+      cursor: pointer !important;
+      width: 20px !important;
+      height: 20px !important;
+      font-size: .8rem !important;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 4px !important;
+    }
+
+    .sidebar-add-btn:hover { background: #313244 !important; color: #cdd6f4 !important; }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .45rem .8rem;
+      cursor: pointer;
+      color: #a6adc8;
+      font-size: .82rem;
+      border-radius: 0;
+      transition: background 0.1s;
+      position: relative;
+    }
+
+    .file-item:hover { background: #313244; }
+    .file-item.active { background: #313244; color: #cdd6f4; }
+
+    .file-item i { font-size: .75rem; }
+    .file-item .fi-html { color: #f38ba8; }
+    .file-item .fi-css { color: #89b4fa; }
+    .file-item .fi-js { color: #f9e2af; }
+
+    .file-del {
+      margin-left: auto;
+      background: none !important;
+      border: none !important;
+      border-image: none !important;
+      color: #6c7086 !important;
+      cursor: pointer !important;
+      width: 16px !important;
+      height: 16px !important;
+      font-size: .6rem !important;
+      padding: 0 !important;
+      border-radius: 3px !important;
+      display: none !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .file-item:hover .file-del { display: flex !important; }
+
+    .editor-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #1e1e2e;
+    }
+
+    .editor-tabs {
+      display: flex;
+      background: #181825;
+      border-bottom: 1px solid #313244;
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .editor-tab {
+      padding: .4rem 1rem;
+      font-size: .78rem;
+      color: #6c7086;
+      cursor: pointer;
+      border-right: 1px solid #313244;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      background: none;
+      border-top: 2px solid transparent;
+      transition: all 0.1s;
+      height: auto !important;
+      width: auto !important;
+      border-image: none !important;
+      border-radius: 0 !important;
+    }
+
+    .editor-tab.active { background: #1e1e2e; color: #cdd6f4; border-top-color: #89b4fa; }
+    .editor-tab:hover:not(.active) { background: #252535; color: #a6adc8; }
+
+    .editor-content { flex: 1; overflow: hidden; position: relative; }
+
+    .editor-pane { display: none; height: 100%; }
+    .editor-pane.active { display: block; }
+
+    .CodeMirror {
+      height: 100% !important;
+      font-size: 13px !important;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace !important;
+    }
+
+    .editor-preview-area {
+      flex: 1;
+      display: none;
+      overflow: hidden;
+    }
+
+    .editor-preview-area iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .editor-split {
+      display: flex;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .split-left { flex: 1; display: flex; flex-direction: column; overflow: hidden; border-right: 2px solid #313244; }
+    .split-right { flex: 1; background: white; }
+    .split-right iframe { width: 100%; height: 100%; border: none; }
+
+    #fullscreen-view {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 99999;
+      background: white;
+    }
+
+    #fullscreen-view iframe { width: 100%; height: 100%; border: none; }
+
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      z-index: 20000;
+    }
+
+    #modal-box {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--white);
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      z-index: 20001;
+      width: 90%;
+      max-width: 360px;
+    }
+
+    #modal-box h3 { font-size: 1.1rem; font-weight: 900; margin-bottom: 1rem; }
+
+    #modal-input {
+      width: 100%;
+      padding: .8rem 1rem;
+      border: 1.5px solid #eee !important;
+      border-image: none !important;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: .95rem;
+      margin-bottom: 1rem;
+      height: auto !important;
+    }
+
+    #modal-input:focus { border-color: var(--green) !important; outline: none; }
+
+    .modal-btns { display: flex; gap: .6rem; }
+    .modal-confirm {
+      flex: 1;
+      height: 38px !important;
+      width: auto !important;
+      background: var(--text) !important;
+      color: white !important;
+      border: none !important;
+      border-image: none !important;
+      border-radius: 10px !important;
+      font-weight: 700 !important;
+      font-size: .9rem !important;
+    }
+    .modal-cancel {
+      flex: 1;
+      height: 38px !important;
+      width: auto !important;
+      background: #f0f0f0 !important;
+      color: var(--text) !important;
+      border: none !important;
+      border-image: none !important;
+      border-radius: 10px !important;
+      font-weight: 700 !important;
+      font-size: .9rem !important;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text);
+      color: white;
+      padding: .7rem 1.5rem;
+      border-radius: 100px;
+      font-weight: 700;
+      font-size: .9rem;
+      z-index: 99999;
+      transition: transform 0.3s;
+      pointer-events: none;
+    }
+
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    .editor-mode-toggle {
+      display: flex;
+      background: #313244;
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      height: 24px !important;
+      width: auto !important;
+      padding: 0 .6rem !important;
+      font-size: .72rem !important;
+      border-radius: 4px !important;
+      border: none !important;
+      border-image: none !important;
+      font-weight: 700 !important;
+      color: #6c7086 !important;
+      background: transparent !important;
+    }
+
+    .mode-btn.active {
+      background: #1e1e2e !important;
+      color: #cdd6f4 !important;
+    }
+
+    .loader {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <nav id="nav">
+    <div id="logo">Taro</div>
+    <div id="buttons">
+      <button id="sign" onclick="openthe('sign')">sign in</button>
+      <button id="log" onclick="openthe('log')">log in</button>
+    </div>
+  </nav>
+
+  <div id="landing-page">
+    <section id="hero">
+      <div class="shape s1"></div>
+      <div class="shape s2"></div>
+      <div class="shape s3"></div>
+      <div class="shape s4"></div>
+      <div class="hero-tag"><i class="fa fa-leaf"></i> Free Web Hosting</div>
+      <h1>Host anything.<br><em>Pay nothing.</em></h1>
+      <button class="btn-start" onclick="openthe('sign')">Get Started</button>
+    </section>
+    <section id="features">
+      <div class="feat-grid">
+        <div class="feat-card" style="--bar: var(--green)"><i class="fa fa-bolt" style="color:var(--green)"></i></div>
+        <div class="feat-card" style="--bar: var(--orange)"><i class="fa fa-globe" style="color:var(--orange)"></i></div>
+        <div class="feat-card" style="--bar: var(--red)"><i class="fa fa-lock" style="color:var(--red)"></i></div>
+        <div class="feat-card" style="--bar: var(--green)"><i class="fa fa-infinity" style="color:var(--green)"></i></div>
+      </div>
+    </section>
+    <footer>
+      <p>© 2026 <strong>Taro</strong> · Free hosting for everyone</p>
+      <a href="https://github.com/mahir-g9/taro/tree" target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
+      <a href="https://youtube.com/@Mahir_YT99" target="_blank" title="YouTube"><i class="fab fa-youtube"></i></a>
+    </footer>
+  </div>
+
+  <div id="dashboard-view">
+    <div class="dash-header">
+      <h2>My Projects</h2>
+      <button class="btn-new-project" onclick="promptNewProject()"><i class="fa fa-plus"></i> New</button>
+    </div>
+    <div class="album-grid" id="album-grid"></div>
+  </div>
+
+  <div id="editor-view">
+    <div class="editor-topbar">
+      <button class="etb-btn etb-back" onclick="backToDashboard()"><i class="fa fa-arrow-left"></i></button>
+      <div class="editor-topbar-title">Taro / <span id="editor-project-name"></span></div>
+      <div class="editor-mode-toggle">
+        <button class="mode-btn active" id="mode-code" onclick="switchMode('code')">Code</button>
+        <button class="mode-btn" id="mode-split" onclick="switchMode('split')">Split</button>
+        <button class="mode-btn" id="mode-preview" onclick="switchMode('preview')">Preview</button>
+      </div>
+      <button class="etb-btn etb-addfile" onclick="promptAddFile()"><i class="fa fa-plus"></i> File</button>
+      <button class="etb-btn etb-run" onclick="runPreview()"><i class="fa fa-play"></i> Run</button>
+      <button class="etb-btn etb-save" id="save-btn" onclick="saveProject()"><i class="fa fa-save"></i> Save</button>
+    </div>
+    <div class="editor-body">
+      <div class="editor-sidebar">
+        <div class="sidebar-header">
+          <span>Files</span>
+        </div>
+        <div id="file-tree"></div>
+      </div>
+      <div class="editor-main" id="editor-main">
+        <div class="editor-tabs" id="editor-tabs"></div>
+        <div class="editor-content" id="editor-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="fullscreen-view">
+    <iframe id="fullscreen-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+
+  <div id="signer" style="display:none">
+    <button class="btn-close" onclick="closeAll()">×</button>
+    <h2>Create Account</h2>
+    <div class="input-group"><input type="email" id="sign-email" placeholder="Email Address"></div>
+    <div class="input-group pass-box">
+      <input type="password" id="sign-pass" placeholder="Create Password">
+      <i class="fa fa-eye" onclick="togglePass('sign-pass', this)"></i>
+    </div>
+    <button class="btn-primary" onclick="handleSignUp()">Sign Up</button>
+    <div class="form-link">Already have an account? <span onclick="openthe('log')">Log in</span></div>
+  </div>
+
+  <div id="loger" style="display:none">
+    <button class="btn-close" onclick="closeAll()">×</button>
+    <h2>Welcome Back</h2>
+    <div class="input-group"><input type="email" id="log-email" placeholder="Email Address"></div>
+    <div class="input-group pass-box">
+      <input type="password" id="log-pass" placeholder="Password">
+      <i class="fa fa-eye" onclick="togglePass('log-pass', this)"></i>
+    </div>
+    <button class="btn-primary" onclick="handleLogin()">Login Now</button>
+    <div class="form-link">Don't have an account? <span onclick="openthe('sign')">Sign up</span></div>
+  </div>
+
+  <div id="overlay" style="display:none" onclick="closeAll()"></div>
+
+  <div id="modal-overlay" onclick="closeModal()"></div>
+  <div id="modal-box">
+    <h3 id="modal-title">Project Name</h3>
+    <input type="text" id="modal-input" placeholder="e.g. my-portfolio">
+    <div class="modal-btns">
+      <button class="modal-confirm" id="modal-confirm-btn">Create</button>
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvF2BV5MBU6AMQOByD9Q5g4wZXF0a9W1g",
+      authDomain: "movement-player.firebaseapp.com",
+      projectId: "movement-player",
+      storageBucket: "movement-player.firebasestorage.app",
+      messagingSenderId: "55543297155",
+      appId: "1:55543297155:web:b8ef612f7041bcab7617b6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let currentProject = null;
+    let openTabs = [];
+    let activeTab = null;
+    let editorInstances = {};
+    let projectFiles = [];
+    let modalCallback = null;
+    let editorMode = 'code';
+
+    const params = new URLSearchParams(window.location.search);
+    const siteParam = params.get('site');
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function openModal(title, placeholder, confirmText, cb) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-input').value = '';
+      document.getElementById('modal-input').placeholder = placeholder;
+      document.getElementById('modal-confirm-btn').textContent = confirmText;
+      document.getElementById('modal-overlay').style.display = 'block';
+      document.getElementById('modal-box').style.display = 'block';
+      document.getElementById('modal-input').focus();
+      modalCallback = cb;
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').style.display = 'none';
+      document.getElementById('modal-box').style.display = 'none';
+      modalCallback = null;
+    }
+
+    document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+      const val = document.getElementById('modal-input').value.trim();
+      if (modalCallback && val) modalCallback(val);
+    });
+
+    document.getElementById('modal-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const val = document.getElementById('modal-input').value.trim();
+        if (modalCallback && val) modalCallback(val);
+      }
+    });
+
+    function getFileIcon(name) {
+      if (name.endsWith('.html')) return '<i class="fab fa-html5 fi-html"></i>';
+      if (name.endsWith('.css')) return '<i class="fab fa-css3-alt fi-css"></i>';
+      if (name.endsWith('.js')) return '<i class="fab fa-js fi-js"></i>';
+      return '<i class="fa fa-file"></i>';
+    }
+
+    function getFileMode(name) {
+      if (name.endsWith('.html')) return 'htmlmixed';
+      if (name.endsWith('.css')) return 'css';
+      if (name.endsWith('.js')) return 'javascript';
+      return 'htmlmixed';
+    }
+
+    function renderFileTree() {
+      const tree = document.getElementById('file-tree');
+      tree.innerHTML = '';
+      projectFiles.forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'file-item' + (activeTab === f.filename ? ' active' : '');
+        item.innerHTML = `${getFileIcon(f.filename)}<span>${f.filename}</span><button class="file-del" onclick="deleteFileFromProject('${f.filename}')"><i class="fa fa-times"></i></button>`;
+        item.onclick = (e) => {
+          if (e.target.closest('.file-del')) return;
+          openFileInEditor(f.filename);
+        };
+        tree.appendChild(item);
+      });
+    }
+
+    function renderTabs() {
+      const tabs = document.getElementById('editor-tabs');
+      tabs.innerHTML = '';
+      openTabs.forEach(name => {
+        const tab = document.createElement('div');
+        tab.className = 'editor-tab' + (activeTab === name ? ' active' : '');
+        tab.innerHTML = `${getFileIcon(name)} ${name}`;
+        tab.onclick = () => switchTab(name);
+        tabs.appendChild(tab);
+      });
+    }
+
+    function openFileInEditor(filename) {
+      if (!openTabs.includes(filename)) openTabs.push(filename);
+      switchTab(filename);
+    }
+
+    function switchTab(filename) {
+      activeTab = filename;
+      renderTabs();
+      renderFileTree();
+      renderEditorContent();
+    }
+
+    function renderEditorContent() {
+      const content = document.getElementById('editor-content');
+
+      if (editorMode === 'split') {
+        content.innerHTML = '<div class="editor-split"><div class="split-left" id="split-code-area"></div><div class="split-right"><iframe id="split-preview-frame" sandbox="allow-scripts"></iframe></div></div>';
+        const area = document.getElementById('split-code-area');
+        renderEditorPane(area);
+        updateSplitPreview();
+        return;
+      }
+
+      if (editorMode === 'preview') {
+        content.innerHTML = '<iframe id="preview-only-frame" style="width:100%;height:100%;border:none;" sandbox="allow-scripts"></iframe>';
+        buildAndRender(document.getElementById('preview-only-frame'));
+        return;
+      }
+
+      content.innerHTML = '';
+      if (!activeTab) return;
+      renderEditorPane(content);
+    }
+
+    function renderEditorPane(container) {
+      if (!activeTab) return;
+      const file = projectFiles.find(f => f.filename === activeTab);
+      if (!file) return;
+
+      if (editorInstances[activeTab]) {
+        container.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.style.height = '100%';
+        container.appendChild(wrapper);
+        const cm = CodeMirror(wrapper, {
+          value: file.content || '',
+          mode: getFileMode(activeTab),
+          theme: 'dracula',
+          lineNumbers: true,
+          autoCloseTags: true,
+          indentWithTabs: true,
+          tabSize: 2,
+          lineWrapping: false
+        });
+        cm.setSize('100%', '100%');
+        editorInstances[activeTab] = cm;
+        cm.on('change', () => {
+          file.content = cm.getValue();
+          if (editorMode === 'split') updateSplitPreview();
+        });
+        return;
+      }
+
+      container.innerHTML = '';
+      const wrapper = document.createElement('div');
+      wrapper.style.height = '100%';
+      container.appendChild(wrapper);
+      const cm = CodeMirror(wrapper, {
+        value: file.content || '',
+        mode: getFileMode(activeTab),
+        theme: 'dracula',
+        lineNumbers: true,
+        indentWithTabs: true,
+        tabSize: 2,
+        lineWrapping: false
+      });
+      cm.setSize('100%', '100%');
+      editorInstances[activeTab] = cm;
+      cm.on('change', () => {
+        file.content = cm.getValue();
+        if (editorMode === 'split') updateSplitPreview();
+      });
+    }
+
+    function updateSplitPreview() {
+      const frame = document.getElementById('split-preview-frame');
+      if (frame) buildAndRender(frame);
+    }
+
+    function buildAndRender(iframe) {
+      const html = projectFiles.find(f => f.filename === 'index.html');
+      const css = projectFiles.find(f => f.filename.endsWith('.css'));
+      const js = projectFiles.find(f => f.filename.endsWith('.js'));
+
+      let base = html ? html.content : '<html><body></body></html>';
+
+      if (css && !base.includes(css.filename)) {
+        base = base.replace('</head>', `<style>${css.content}</style></head>`);
+      }
+      if (js && !base.includes(js.filename)) {
+        base = base.replace('</body>', `<script>${js.content}<\/script></body>`);
+      }
+
+      iframe.srcdoc = base;
+    }
+
+    function runPreview() {
+      switchMode('preview');
+    }
+
+    window.switchMode = function(mode) {
+      editorMode = mode;
+      document.getElementById('mode-code').classList.toggle('active', mode === 'code');
+      document.getElementById('mode-split').classList.toggle('active', mode === 'split');
+      document.getElementById('mode-preview').classList.toggle('active', mode === 'preview');
+      editorInstances = {};
+      renderEditorContent();
+    };
+
+    window.promptAddFile = function() {
+      openModal('New File', 'e.g. style.css', 'Add', (name) => {
+        if (!name.endsWith('.html') && !name.endsWith('.css') && !name.endsWith('.js')) {
+          showToast('Only .html, .css, .js files allowed');
+          return;
+        }
+        if (projectFiles.find(f => f.filename === name)) {
+          showToast('File already exists');
+          return;
+        }
+        projectFiles.push({ filename: name, content: '' });
+        closeModal();
+        renderFileTree();
+        openFileInEditor(name);
+        showToast('File added');
+      });
+    };
+
+    window.deleteFileFromProject = function(name) {
+      if (projectFiles.length <= 1) { showToast("Can't delete the only file"); return; }
+      projectFiles = projectFiles.filter(f => f.filename !== name);
+      openTabs = openTabs.filter(t => t !== name);
+      if (activeTab === name) activeTab = openTabs[0] || null;
+      delete editorInstances[name];
+      renderFileTree();
+      renderTabs();
+      renderEditorContent();
+      showToast('File removed');
+    };
+
+    async function saveProject() {
+      if (!currentUser || !currentProject) return;
+      const btn = document.getElementById('save-btn');
+      btn.innerHTML = '<span class="loader"></span>';
+      btn.disabled = true;
+      try {
+        await setDoc(doc(db, 'projects', currentProject.id), {
+          name: currentProject.name,
+          uid: currentUser.uid,
+          files: projectFiles,
+          updatedAt: Date.now()
+        });
+        showToast('Saved!');
+      } catch (e) {
+        showToast('Save failed: ' + e.message);
+      }
+      btn.innerHTML = '<i class="fa fa-save"></i> Save';
+      btn.disabled = false;
+    }
+
+    window.saveProject = saveProject;
+
+    async function loadDashboard() {
+      const grid = document.getElementById('album-grid');
+      grid.innerHTML = '<p style="color:var(--muted);padding:1rem">Loading...</p>';
+      try {
+        const q = query(collection(db, 'projects'), where('uid', '==', currentUser.uid));
+        const snap = await getDocs(q);
+        grid.innerHTML = '';
+        if (snap.empty) {
+          grid.innerHTML = '<div class="empty-state"><i class="fa fa-folder-open"></i><p>No projects yet. Hit <strong>New</strong> to start.</p></div>';
+          return;
+        }
+        snap.forEach(d => {
+          const data = d.data();
+          const card = document.createElement('div');
+          card.className = 'project-card';
+          card.innerHTML = `
+            <div class="project-card-icon"><i class="fa fa-code"></i></div>
+            <h3>${data.name}</h3>
+            <p>${(data.files || []).length} file(s)</p>
+            <div class="card-actions">
+              <button class="card-btn card-btn-edit" onclick="openEditor('${d.id}')">Edit</button>
+              <button class="card-btn card-btn-view" onclick="previewProject('${d.id}')">View</button>
+              <button class="card-btn card-btn-del" onclick="confirmDeleteProject('${d.id}', '${data.name}')">Del</button>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (e) {
+        grid.innerHTML = '<p style="color:red;padding:1rem">Error loading projects</p>';
+      }
+    }
+
+    window.openEditor = async function(projectId) {
+      const snap = await getDoc(doc(db, 'projects', projectId));
+      if (!snap.exists()) { showToast('Project not found'); return; }
+      const data = snap.data();
+      currentProject = { id: projectId, name: data.name };
+      projectFiles = data.files || [{ filename: 'index.html', content: '<h1>Hello World</h1>' }];
+      openTabs = projectFiles.length > 0 ? [projectFiles[0].filename] : [];
+      activeTab = openTabs[0] || null;
+      editorInstances = {};
+      editorMode = 'code';
+
+      document.getElementById('editor-project-name').textContent = data.name;
+      document.getElementById('mode-code').classList.add('active');
+      document.getElementById('mode-split').classList.remove('active');
+      document.getElementById('mode-preview').classList.remove('active');
+
+      document.getElementById('dashboard-view').style.display = 'none';
+      document.getElementById('editor-view').style.display = 'flex';
+
+      renderFileTree();
+      renderTabs();
+      renderEditorContent();
+    };
+
+    window.previewProject = async function(projectId) {
+      const snap = await getDoc(doc(db, 'projects', projectId));
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const files = data.files || [];
+      const html = files.find(f => f.filename === 'index.html');
+      const css = files.find(f => f.filename.endsWith('.css'));
+      const js = files.find(f => f.filename.endsWith('.js'));
+
+      let base = html ? html.content : '<html><body></body></html>';
+      if (css) base = base.replace('</head>', `<style>${css.content}</style></head>`);
+      if (js) base = base.replace('</body>', `<script>${js.content}<\/script></body>`);
+
+      document.getElementById('fullscreen-iframe').srcdoc = base;
+      document.getElementById('fullscreen-view').style.display = 'block';
+      document.getElementById('nav').style.display = 'none';
+    };
+
+    window.confirmDeleteProject = function(id, name) {
+      openModal(`Delete "${name}"?`, '', 'Yes, Delete', async (val) => {
+        if (val.toLowerCase() === 'yes' || val.toLowerCase() === 'delete' || val) {
+          await deleteDoc(doc(db, 'projects', id));
+          closeModal();
+          showToast('Deleted');
+          loadDashboard();
+        }
+      });
+      document.getElementById('modal-input').placeholder = 'Type anything to confirm';
+    };
+
+    window.promptNewProject = function() {
+      openModal('New Project', 'e.g. my-portfolio', 'Create', async (name) => {
+        const cleanName = name.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+        const q = query(collection(db, 'projects'), where('name', '==', cleanName), where('uid', '==', currentUser.uid));
+        const snap = await getDocs(q);
+        if (!snap.empty) { showToast('Name already taken'); return; }
+
+        const newId = cleanName + '-' + Date.now();
+        await setDoc(doc(db, 'projects', newId), {
+          name: cleanName,
+          uid: currentUser.uid,
+          files: [
+            { filename: 'index.html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>' + cleanName + '</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>Hello from ' + cleanName + '</h1>\n  <script src="main.js"><\/script>\n</body>\n</html>' },
+            { filename: 'style.css', content: 'body {\n  font-family: sans-serif;\n  background: #f5f5f5;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n  margin: 0;\n}\n\nh1 {\n  color: #2eb872;\n}' },
+            { filename: 'main.js', content: 'console.log("Hello from ' + cleanName + '");' }
+          ],
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+        closeModal();
+        showToast('Project created!');
+        await loadDashboard();
+        window.openEditor(newId);
+      });
+    };
+
+    window.backToDashboard = function() {
+      document.getElementById('editor-view').style.display = 'none';
+      document.getElementById('dashboard-view').style.display = 'block';
+      currentProject = null;
+      editorInstances = {};
+      loadDashboard();
+    };
+
+    window.openthe = function(m) {
+      document.getElementById('overlay').style.display = 'block';
+      if (m === 'sign') {
+        document.getElementById('signer').style.display = 'block';
+        document.getElementById('loger').style.display = 'none';
+      } else {
+        document.getElementById('loger').style.display = 'block';
+        document.getElementById('signer').style.display = 'none';
+      }
+    };
+
+    window.closeAll = function() {
+      document.getElementById('signer').style.display = 'none';
+      document.getElementById('loger').style.display = 'none';
+      document.getElementById('overlay').style.display = 'none';
+    };
+
+    window.togglePass = function(id, icon) {
+      const input = document.getElementById(id);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    };
+
+    window.handleSignUp = async function() {
+      const email = document.getElementById('sign-email').value;
+      const pass = document.getElementById('sign-pass').value;
+      try {
+        await createUserWithEmailAndPassword(auth, email, pass);
+        closeAll();
+        showToast('Account created!');
+      } catch (e) {
+        showToast(e.message);
+      }
+    };
+
+    window.handleLogin = async function() {
+      const email = document.getElementById('log-email').value;
+      const pass = document.getElementById('log-pass').value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        closeAll();
+        showToast('Welcome back!');
+      } catch (e) {
+        showToast(e.message);
+      }
+    };
+
+    window.logMeOut = async function() {
+      await signOut(auth);
+      location.reload();
+    };
+
+    async function checkSiteParam(user) {
+      if (!siteParam) return false;
+      const q = query(collection(db, 'projects'), where('name', '==', siteParam));
+      const snap = await getDocs(q);
+      if (snap.empty) return false;
+      const data = snap.docs[0].data();
+      const files = data.files || [];
+      const html = files.find(f => f.filename === 'index.html');
+      const css = files.find(f => f.filename.endsWith('.css'));
+      const js = files.find(f => f.filename.endsWith('.js'));
+
+      let base = html ? html.content : '<html><body><h1>Empty project</h1></body></html>';
+      if (css) base = base.replace('</head>', `<style>${css.content}</style></head>`);
+      if (js) base = base.replace('</body>', `<script>${js.content}<\/script></body>`);
+
+      document.getElementById('fullscreen-iframe').srcdoc = base;
+      document.getElementById('fullscreen-view').style.display = 'block';
+      document.getElementById('nav').style.display = 'none';
+      document.getElementById('landing-page').style.display = 'none';
+      document.getElementById('dashboard-view').style.display = 'none';
+      return true;
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      const navButtons = document.getElementById('buttons');
+      const landing = document.getElementById('landing-page');
+      const dash = document.getElementById('dashboard-view');
+
+      if (siteParam) {
+        const handled = await checkSiteParam(user);
+        if (handled) return;
+      }
+
+      if (user) {
+        landing.style.display = 'none';
+        dash.style.display = 'block';
+        navButtons.innerHTML = `<button onclick="logMeOut()" style="width:70px!important">Log Out</button>`;
+        loadDashboard();
+      } else {
+        landing.style.display = 'block';
+        dash.style.display = 'none';
+        navButtons.innerHTML = `
+          <button id="sign" onclick="openthe('sign')">sign in</button>
+          <button id="log" onclick="openthe('log')">log in</button>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>
