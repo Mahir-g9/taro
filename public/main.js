@@ -19,6 +19,7 @@ const BUILD = '1.0.0';
 // The free Render runner sleeps when idle. Pinging it early wakes it up before the user presses Run.
 let lastWake = 0;
 const isNodeFile = n => /\.(c|m)?js$/.test(n || '');
+const NODE_CODE = /\brequire\s*\(|module\.exports|\bprocess\.(env|argv|version|exit)/; // looks like Node.js code, not browser code
 const wakeRunner = () => { if (Date.now() - lastWake < 10 * 60 * 1000) return; lastWake = Date.now(); fetch(RUNNER_URL + '/health', { mode: 'no-cors' }).catch(() => { }); };
 
 /* ---------- helpers ---------- */
@@ -430,7 +431,8 @@ async function api(baseUrl, path, body) {
 }
 const srcFiles = () => S.files.filter(f => !isFolder(f));
 function run() {
-  if (!S.proj) return; const ae = ext(S.active || ''), target = (ae === 'py' || ae === 'sql') ? S.active : S.entry, e = ext(target);
+  if (!S.proj) return; const ae = ext(S.active || ''), af = fileOf(S.active), nodeOpen = ae === 'js' && af && NODE_CODE.test(af.content || ''),
+    target = (ae === 'py' || ae === 'sql' || nodeOpen) ? S.active : S.entry, e = ext(target); // the open file runs if it is Python, SQL or Node code
   if (e === 'html' || e === 'htm') {
     const h = buildDoc(S.files, target, { hook: set.console === 'builtin', eruda: set.console === 'eruda' });
     if (set.launch === 'newtab') { window.open(URL.createObjectURL(new Blob([h], { type: 'text/html' })), '_blank'); return; }
@@ -446,10 +448,42 @@ function runPy(target) {
   clearTimeout(pyt); pyt = setTimeout(kill, 90000);
   pyw.postMessage({ code: fileOf(target).content || '', files: srcFiles().map(f => ({ p: f.filename, c: f.content || '' })) });
 }
+/* Real server-start check: polls the runner's /health until it answers (no fake timer). */
+let runToken = 0;
+function statusLine(text) {
+  const p = $('#console-out'), el = document.createElement('div'); el.className = 'inf'; el.textContent = text; p.appendChild(el); p.scrollTop = p.scrollHeight; return el;
+}
+async function wakeUp(url, label) {
+  const my = ++runToken, t0 = Date.now(), FR = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏', el = statusLine('');
+  let i = 0, tries = 0, msg = 'Checking the ' + label + '…';
+  const secs = () => ((Date.now() - t0) / 1000).toFixed(0) + 's';
+  const tick = setInterval(() => { el.textContent = FR[i++ % FR.length] + ' ' + msg + ' ' + secs(); }, 100);
+  try {
+    while (Date.now() - t0 < 120000) {
+      if (my !== runToken) return false; // a newer run started
+      tries++;
+      const ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
+      let up = false;
+      try { const r = await fetch(url + '/health', { cache: 'no-store', signal: ac.signal }); up = r.ok && !!((await r.json().catch(() => ({}))).ok); } catch { }
+      clearTimeout(to);
+      if (up) { clearInterval(tick); el.textContent = '✔ ' + label + ' is ready (' + ((Date.now() - t0) / 1000).toFixed(1) + 's' + (tries > 1 ? ', ' + tries + ' checks' : '') + ')'; return true; }
+      msg = 'Waking up the ' + label + ' (booting, check ' + tries + ')…' + (Date.now() - t0 > 60000 ? ' still trying. If it never finishes, check the runner on Render.' : '');
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    el.textContent = '✖ The ' + label + ' did not start within 2 minutes.'; el.className = 'err'; return false;
+  } finally { clearInterval(tick); }
+}
 async function runNode(target) {
-  $('#console-out').textContent = ''; openSheet('console'); logOut('inf', 'Waking up the Node server… the first run can take up to a minute.');
-  try { const r = await api(RUNNER_URL, '/run', { entry: target, files: srcFiles().map(f => ({ path: f.filename, content: f.content || '' })) }); if (r.stdout) logOut('log', r.stdout); if (r.stderr) logOut('error', r.stderr); logOut('inf', 'exit code ' + r.code + (r.timedOut ? ' (timed out)' : '')); }
-  catch (e) { logOut('error', /failed to fetch|networkerror/i.test(e.message) ? 'Could not reach the Node server. Check RUNNER_URL in main.js and that taro-runner is live on Render.' : e.message); }
+  $('#console-out').textContent = ''; openSheet('console');
+  if (!me) return logOut('error', 'Log in first.');
+  if (!(await wakeUp(RUNNER_URL, 'Node server'))) return;
+  const t0 = Date.now(), el = statusLine('Running ' + base(target) + '…');
+  try {
+    const r = await api(RUNNER_URL, '/run', { entry: target, files: srcFiles().map(f => ({ path: f.filename, content: f.content || '' })) });
+    el.textContent = '✔ ' + base(target) + ' finished in ' + ((Date.now() - t0) / 1000).toFixed(1) + 's';
+    if (r.stdout) logOut('log', r.stdout); if (r.stderr) logOut('error', r.stderr);
+    logOut('inf', 'exit code ' + r.code + (r.timedOut ? ' (timed out)' : ''));
+  } catch (e) { el.remove(); logOut('error', /failed to fetch|networkerror/i.test(e.message) ? 'Could not reach the Node server. Check RUNNER_URL in main.js and that taro-runner is live on Render.' : e.message); }
 }
 async function runSql(target) {
   openSheet('sql'); const out = $('#sql-out'); out.textContent = 'Running…';
