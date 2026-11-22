@@ -12,7 +12,7 @@ const app = initializeApp({
 });
 const auth = getAuth(app), db = getFirestore(app);
 
-// Set these to your two Render services (see index.js).
+//Set these to your two Render services (see index.js).
 const API_URL = 'https://taro-j1g9.onrender.com';      // MODE=api    (SQL, has the DB secrets)
 const RUNNER_URL = 'https://taro-runner.onrender.com'; // MODE=runner (Node code, no secrets)
 const BUILD = '1.0.0';
