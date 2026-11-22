@@ -16,6 +16,10 @@ const auth = getAuth(app), db = getFirestore(app);
 const API_URL = 'https://taro-j1g9.onrender.com';      // MODE=api    (SQL, has the DB secrets)
 const RUNNER_URL = 'https://taro-runner.onrender.com'; // MODE=runner (Node code, no secrets)
 const BUILD = '1.0.0';
+// The free Render runner sleeps when idle. Pinging it early wakes it up before the user presses Run.
+let lastWake = 0;
+const isNodeFile = n => /\.(c|m)?js$/.test(n || '');
+const wakeRunner = () => { if (Date.now() - lastWake < 10 * 60 * 1000) return; lastWake = Date.now(); fetch(RUNNER_URL + '/health', { mode: 'no-cors' }).catch(() => { }); };
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -361,7 +365,8 @@ async function openEditor(id, explore = false) {
   show('editor'); ensureChrome(); makeCM(); applySettings();
   $('#ed-title b').textContent = d.name; $('#save-state small').hidden = explore; $('#vis').disabled = explore; $('#btn-exit-publish').hidden = explore;
   const b = $('#ed-banner'); b.hidden = !explore; if (explore) b.innerHTML = `You are viewing <strong>${esc(d.name)}</strong>. Changes won't be saved. <a href="#" data-act="fork-current" style="color:#4c2e9e">Fork</a>`;
-  setState('saved'); closeSheet(); drawerClose(); findClose(true); $('#keys-1').hidden = false; $('#keys-2').hidden = true; $('#ctl-panel').hidden = true;
+  setState('saved'); closeSheet(); drawerClose(); findClose(true);
+  if (!explore && isNodeFile(S.entry)) wakeRunner(); $('#keys-1').hidden = false; $('#keys-2').hidden = true; $('#ctl-panel').hidden = true;
   openFile(S.entry);
 }
 const STATES = { saved: 'auto saved', saving: 'saving…', dirty: 'unsaved', err: 'save failed' };
@@ -439,9 +444,9 @@ function runPy(target) {
   pyw.postMessage({ code: fileOf(target).content || '', files: srcFiles().map(f => ({ p: f.filename, c: f.content || '' })) });
 }
 async function runNode(target) {
-  $('#console-out').textContent = ''; openSheet('console'); logOut('inf', 'Running on the Taro server… (the first run can take ~30s to wake it up)');
+  $('#console-out').textContent = ''; openSheet('console'); logOut('inf', 'Waking up the Node server… the first run can take up to a minute.');
   try { const r = await api(RUNNER_URL, '/run', { entry: target, files: srcFiles().map(f => ({ path: f.filename, content: f.content || '' })) }); if (r.stdout) logOut('log', r.stdout); if (r.stderr) logOut('error', r.stderr); logOut('inf', 'exit code ' + r.code + (r.timedOut ? ' (timed out)' : '')); }
-  catch (e) { logOut('error', e.message); }
+  catch (e) { logOut('error', /failed to fetch|networkerror/i.test(e.message) ? 'Could not reach the Node server. Check RUNNER_URL in main.js and that taro-runner is live on Render.' : e.message); }
 }
 async function runSql(target) {
   openSheet('sql'); const out = $('#sql-out'); out.textContent = 'Running…';
@@ -582,7 +587,7 @@ const ACT = {
   'file-menu': (el, e) => { e.stopPropagation(); const f = el.dataset.f; popMenu(f.endsWith('/') ? [['del-file', 'fa-trash', 'Delete folder', 'del', f]] : [['copy-code', 'fa-copy', 'Copy full code in this file', '', f], ['download', 'fa-download', 'Download', '', f], ['set-entry', 'fa-circle-play', 'Launch as default', '', f], ['del-file', 'fa-trash', 'Delete', 'del', f]].filter(x => !S.explore || x[0] !== 'del-file' && x[0] !== 'set-entry'), el); },
   'copy-code': async el => { await clip.w((fileOf(el.dataset.f) || {}).content || ''); toast('Copied'); $('#pop-menu').hidden = true; },
   download: el => { const f = fileOf(el.dataset.f); if (f) download(f.filename, f.content || ''); $('#pop-menu').hidden = true; },
-  'set-entry': el => { S.entry = el.dataset.f; markDirty(); renderDrawer(); toast('Default launch file: ' + base(S.entry)); $('#pop-menu').hidden = true; },
+  'set-entry': el => { S.entry = el.dataset.f; markDirty(); renderDrawer(); if (isNodeFile(S.entry)) wakeRunner(); toast('Default launch file: ' + base(S.entry)); $('#pop-menu').hidden = true; },
   'del-file': el => { $('#pop-menu').hidden = true; delFile(el.dataset.f); },
   'new-file': () => { if (S.explore) return; openModal('New file', 'e.g. main.py or src/app.js', 'Add', n => { if (!/^[\w\-.]+(\/[\w\-.]+)*\.(html|css|js|py|sql|json|md|txt)$/i.test(n) || n.includes('..')) return toast('Use a name like main.js or src/app.py'); if (fileOf(n)) return toast('File already exists'); S.files.push({ filename: n, content: '' }); ensureDirs(n); closeModal(); markDirty(); renderDrawer(); openFile(n); }); },
   'new-folder': () => { if (S.explore) return; openModal('New folder', 'e.g. src', 'Add', n => { if (!/^[\w\-]+(\/[\w\-]+)*$/.test(n)) return toast('Use letters, numbers, - and _'); if (fileOf(n + '/')) return toast('Folder already exists'); S.files.push({ filename: n + '/', content: '' }); ensureDirs(n + '/x'); closeModal(); markDirty(); renderDrawer(); }); },
