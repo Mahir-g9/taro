@@ -12,7 +12,7 @@ const app = initializeApp({
 });
 const auth = getAuth(app), db = getFirestore(app);
 
-//Set these to your two Render services (see index.js).
+// Set these to your two Render services (see index.js).
 const API_URL = 'https://taro-j1g9.onrender.com';      // MODE=api    (SQL, has the DB secrets)
 const RUNNER_URL = 'https://taro-runner.onrender.com'; // MODE=runner (Node code, no secrets)
 const BUILD = '1.0.0';
@@ -455,7 +455,7 @@ function statusLine(text) {
 }
 async function wakeUp(url, label) {
   const my = ++runToken, t0 = Date.now(), FR = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏', el = statusLine('');
-  let i = 0, tries = 0, msg = 'Checking the ' + label + '…';
+  let i = 0, tries = 0, blockedRun = 0, msg = 'Checking the ' + label + '…';
   const secs = () => ((Date.now() - t0) / 1000).toFixed(0) + 's';
   const tick = setInterval(() => { el.textContent = FR[i++ % FR.length] + ' ' + msg + ' ' + secs(); }, 100);
   try {
@@ -463,10 +463,19 @@ async function wakeUp(url, label) {
       if (my !== runToken) return false; // a newer run started
       tries++;
       const ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
-      let up = false;
-      try { const r = await fetch(url + '/health', { cache: 'no-store', signal: ac.signal }); up = r.ok && !!((await r.json().catch(() => ({}))).ok); } catch { }
+      let up = false, blocked = false;
+      try { const r = await fetch(url + '/health?t=' + Date.now(), { signal: ac.signal }); up = r.ok && !!((await r.json().catch(() => ({}))).ok); }
+      catch (e) { // a fast failure that is not a timeout: is the server reachable at all? (an opaque no-cors reply means the browser is blocking us)
+        if (e.name !== 'AbortError') { try { await fetch(url + '/health?t=' + Date.now(), { mode: 'no-cors', signal: ac.signal }); blocked = true; } catch { } }
+      }
       clearTimeout(to);
+      blockedRun = blocked ? blockedRun + 1 : 0;
       if (up) { clearInterval(tick); el.textContent = '✔ ' + label + ' is ready (' + ((Date.now() - t0) / 1000).toFixed(1) + 's' + (tries > 1 ? ', ' + tries + ' checks' : '') + ')'; return true; }
+      if (blockedRun >= 6) {
+        clearInterval(tick); el.className = 'err';
+        el.textContent = '✖ The server is up, but the browser blocks it (CORS). On Render open taro-runner > Environment, set ALLOWED_ORIGINS to exactly ' + location.origin + ' (no / at the end), save, wait for the redeploy, then try again.';
+        return false;
+      }
       msg = 'Waking up the ' + label + ' (booting, check ' + tries + ')…' + (Date.now() - t0 > 60000 ? ' still trying. If it never finishes, check the runner on Render.' : '');
       await new Promise(r => setTimeout(r, 1500));
     }
