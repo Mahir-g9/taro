@@ -1,5 +1,8 @@
-
-// Taro server. Deploy this one file TWICE on Render with a different MODE:
+// Taro server
+// Author: mahir (https://github.com/Mahir-g9)
+// Start: yarn start   (runs: node index.js)
+//
+// Deploy this one file TWICE on Render with a different MODE:
 //   MODE=api     -> SQL endpoints. Holds the database secrets. Never runs user code.
 //   MODE=runner  -> runs user Node.js code. Must have NO database secrets.
 // (MODE=dev runs both in one process for local testing only. Never use it in production.)
@@ -23,7 +26,9 @@ const app = express();
 app.set('trust proxy', 1); // Render terminates TLS
 app.use(cors({ origin: (o, cb) => cb(null, !o || ORIGINS.includes(o)), methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Authorization'], maxAge: 600 }));
 app.use(express.json({ limit: '2mb' }));
-if (process.env.SERVE_PUBLIC === '1') app.use(express.static(path.join(__dirname, 'public')));
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const SERVE_FRONTEND = MODE !== 'runner' || process.env.SERVE_PUBLIC === '1'; // the runner service only runs code
+if (SERVE_FRONTEND) app.use(express.static(PUBLIC_DIR));
 app.get('/health', (req, res) => res.json({ ok: true, mode: MODE }));
 
 // ---- Firebase login check (public keys only, no service account needed) ----
@@ -232,10 +237,17 @@ function startRunner() {
     }));
 }
 
-
 if (MODE === 'api' || MODE === 'dev') startApi();
 if (MODE === 'runner' || MODE === 'dev') startRunner();
 if (!['api', 'runner', 'dev'].includes(MODE)) { console.error('Set MODE to api or runner.'); process.exit(1); }
 if (MODE === 'dev') console.warn('MODE=dev runs user code next to the database secrets. For local testing only.');
+
+// Frontend fallback. Must stay AFTER all API routes. Only GET requests reach it, so POST /sql/run and /run are untouched.
+if (SERVE_FRONTEND) {
+    app.get('*', (req, res) => {
+        if (path.extname(req.path)) return res.sendStatus(404); // a missing .js/.css file should 404, not return the page
+        res.sendFile(path.join(PUBLIC_DIR, 'index.html'));      // keeps links like /?site=name and /?view=name working
+    });
+}
 
 app.listen(PORT, () => console.log(`Taro server (${MODE}) listening on ${PORT}`));
