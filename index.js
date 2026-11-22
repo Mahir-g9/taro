@@ -143,7 +143,7 @@ function startApi() {
     }
 
     const sqlText = req => {
-        const s = req.body && req.body.sql;
+        const b = req.body || {}, s = typeof b.sql64 === 'string' ? Buffer.from(b.sql64, 'base64').toString('utf8') : b.sql;
         if (typeof s !== 'string' || !s.trim()) throw fail(400, 'Write some SQL first.');
         if (s.length > 100000) throw fail(413, 'That SQL file is too large.');
         return s;
@@ -206,7 +206,9 @@ function startRunner() {
     const cut = s => String(s || '').slice(0, 64 * 1024);
 
     app.post('/run', needLogin, limit(12, 60000), wrap(async (req, res) => {
-        const { entry, files } = req.body || {};
+        const body = req.body || {}, entry = body.entry;
+        // Code can arrive as base64 ("b64") so that network firewalls that scan request bodies do not block words like /etc/passwd.
+        const files = Array.isArray(body.files) ? body.files.map(f => (f && typeof f.b64 === 'string') ? { path: f.path, content: Buffer.from(f.b64, 'base64').toString('utf8') } : f) : null;
         if (!Array.isArray(files) || !files.length || files.length > 100) throw fail(400, 'Send 1 to 100 files.');
         let total = 0;
         for (const f of files) {
@@ -215,6 +217,7 @@ function startRunner() {
             if ((total += f.content.length) > 2 * 1024 * 1024) throw fail(413, 'Project is too large to run.');
         }
         if (typeof entry !== 'string' || !/\.(c|m)?js$/.test(entry) || !files.some(f => f.path === entry)) throw fail(400, 'Choose a .js file to launch.');
+        console.log('run request:', String(req.uid).slice(0, 6), entry, files.length + ' file(s)');
         if (running >= MAX_RUN) throw fail(429, 'The runner is busy. Try again in a few seconds.');
         running++;
         const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'run-'));
@@ -249,5 +252,12 @@ if (SERVE_FRONTEND) {
         res.sendFile(path.join(PUBLIC_DIR, 'index.html'));      // keeps links like /?site=name and /?view=name working
     });
 }
+
+process.on('uncaughtException', e => console.error('uncaught:', e));
+process.on('unhandledRejection', e => console.error('unhandled:', e));
+app.use((err, req, res, next) => { // body too large, bad JSON, etc.
+    console.error('request error:', err.message);
+    res.status(err.status || 400).json({ error: err.type === 'entity.too.large' ? 'That project is too large.' : 'Bad request.' });
+});
 
 app.listen(PORT, () => console.log(`Taro server (${MODE}) listening on ${PORT}`));
