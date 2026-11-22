@@ -430,6 +430,7 @@ async function api(baseUrl, path, body) {
   const j = await r.json().catch(() => ({ error: 'Bad response from server' })); if (!r.ok) throw new Error(j.error || r.statusText); return j;
 }
 const srcFiles = () => S.files.filter(f => !isFolder(f));
+const b64 = t => { let s = ''; new TextEncoder().encode(t).forEach(x => s += String.fromCharCode(x)); return btoa(s); }; // code is sent encoded so firewalls do not block words like /etc/passwd
 function run() {
   if (!S.proj) return; const ae = ext(S.active || ''), af = fileOf(S.active), nodeOpen = ae === 'js' && af && NODE_CODE.test(af.content || ''),
     target = (ae === 'py' || ae === 'sql' || nodeOpen) ? S.active : S.entry, e = ext(target); // the open file runs if it is Python, SQL or Node code
@@ -488,17 +489,17 @@ async function runNode(target) {
   if (!(await wakeUp(RUNNER_URL, 'Node server'))) return;
   const t0 = Date.now(), el = statusLine('Running ' + base(target) + '…');
   try {
-    const r = await api(RUNNER_URL, '/run', { entry: target, files: srcFiles().map(f => ({ path: f.filename, content: f.content || '' })) });
+    const r = await api(RUNNER_URL, '/run', { entry: target, files: srcFiles().map(f => ({ path: f.filename, b64: b64(f.content || '') })) });
     el.textContent = '✔ ' + base(target) + ' finished in ' + ((Date.now() - t0) / 1000).toFixed(1) + 's';
     if (r.stdout) logOut('log', r.stdout); if (r.stderr) logOut('error', r.stderr);
     logOut('inf', 'exit code ' + r.code + (r.timedOut ? ' (timed out)' : ''));
-  } catch (e) { el.remove(); logOut('error', /failed to fetch|networkerror/i.test(e.message) ? 'Could not reach the Node server. Check RUNNER_URL in main.js and that taro-runner is live on Render.' : e.message); }
+  } catch (e) { el.remove(); logOut('error', /failed to fetch|networkerror/i.test(e.message) ? 'Your code could not be sent to the Node server (no answer from the network). On Render open taro-runner > Logs: if a "run request" line appears, tell Taro support; if not, the request was blocked before reaching it.' : e.message); }
 }
 async function runSql(target) {
   openSheet('sql'); const out = $('#sql-out'); out.textContent = 'Running…';
   const text = target === S.active && S.cm.somethingSelected() ? S.cm.getSelection() : (fileOf(target).content || '');
   try {
-    const r = await api(API_URL, '/sql/run', { sql: text });
+    const r = await api(API_URL, '/sql/run', { sql64: b64(text) });
     out.innerHTML = r.results.map(x => x.fields && x.fields.length ? `<p>${esc(x.command)} · ${x.rowCount} row(s)</p><div style="overflow:auto"><table><tr>${x.fields.map(f => `<th>${esc(f)}</th>`).join('')}</tr>${x.rows.map(row => `<tr>${row.map(c => `<td>${esc(c === null ? 'NULL' : typeof c === 'object' ? JSON.stringify(c) : c)}</td>`).join('')}</tr>`).join('')}</table></div>` : `<p>${esc(x.command)} · ${x.rowCount ?? 0} row(s)</p>`).join('<br>');
   } catch (e) { out.innerHTML = `<p class="err" style="color:#ff6b6b">${esc(e.message)}</p>`; }
 }
