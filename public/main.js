@@ -47,7 +47,7 @@ const SCHEMA = [
     tg('showTabs', 'Show File Tabs', 'Show open files as tabs at the top.'),
     sel('tabMode', 'File Tab Mode', [['editor', 'Pin on Editor'], ['drawer', 'Drawer only']], 'Keep tabs pinned on the editor, or only use the file drawer.'),
     tg('statusBar', 'Show Encoding Bar', 'Shows line, column and encoding under the editor.'),
-    sel('textSize', 'Text Size', [['0.9', 'Small'], ['1', 'Default'], ['1.15', 'Large']], 'Size of the interface text.'),
+    sel('textSize', 'Text Size', [['0.9', 'Small'], ['1', 'Default'], ['1.15', 'Large'], ['1.3', 'Extra large']], 'Scales text, icons and bars together, including this page.'),
     tg('night', 'Night Mode', 'Dark editor. Turn off for a light editor.')] },
   { h: 'Editor', rows: [
     tg('autocomplete', 'Autocomplete/ Check Syntax', 'Underlines JavaScript errors while you type.'),
@@ -312,12 +312,12 @@ function makeCM() {
     }
   });
   S.cm = cm;
-  cm.on('change', () => { const f = fileOf(S.active); if (f && !S.explore) { f.content = cm.getValue(); markDirty(); } undoState(); });
+  cm.on('change', () => { const f = fileOf(S.active); if (f && !S.explore) { f.content = cm.getValue(); markDirty(); } undoState(); findLater(); });
   cm.on('beforeChange', (c, ch) => { if (S.armed && ch.origin === '+input') { ch.cancel(); disarm(); runCtl(ch.text.join('').toLowerCase()); } });
   let ht; cm.on('inputRead', (c, ch) => { if (!set.hints || c.state.completionActive || !/^[\w.<]$/.test(ch.text[0] || '')) return; clearTimeout(ht); ht = setTimeout(() => !c.state.completionActive && c.showHint({ completeSingle: false }), 150); });
   cm.on('cursorActivity', c => {
     const p = c.getCursor(); $('#st-pos').textContent = `Ln ${p.line + 1}, Col ${p.ch + 1}`;
-    const bar = $('#sel-bar'); if (!set.actionBar || !c.somethingSelected()) { bar.hidden = true; return; }
+    const bar = $('#sel-bar'); if (!set.actionBar || !c.somethingSelected() || !$('#find-bar').hidden) { bar.hidden = true; return; }
     const a = c.cursorCoords(true, 'window'), r = $('#ed-main').getBoundingClientRect(); bar.hidden = false;
     bar.style.left = Math.max(4, Math.min(a.left - r.left, r.width - 170)) + 'px'; bar.style.top = Math.max(4, a.top - r.top - 46) + 'px';
   });
@@ -328,7 +328,7 @@ function openFile(name) {
   const f = fileOf(name); if (!f || isFolder(f) || !S.cm) return;
   if (!S.tabs.includes(name)) S.tabs.push(name); S.active = name;
   if (!S.docs[name]) S.docs[name] = CodeMirror.Doc(f.content || '', modeFor(name));
-  S.cm.swapDoc(S.docs[name]); applyCM(S.cm);
+  fClear(); S.cm.swapDoc(S.docs[name]); applyCM(S.cm); if (!$('#find-bar').hidden) findRun();
   if (set.detectTab) { const t = f.content || ''; if (/^\t/m.test(t)) S.cm.setOption('indentWithTabs', true); else { const m = t.match(/^ {2,8}(?=\S)/gm); if (m) { const n = Math.min(...m.map(x => x.length)); S.cm.setOption('indentUnit', n); S.cm.setOption('tabSize', n); } } }
   $('#st-lang').textContent = ext(name) || 'text'; renderTabs(); undoState();
 }
@@ -342,7 +342,7 @@ function renderDrawer() {
   $('#file-list').innerHTML = rows.map(f => {
     const dir = isFolder(f), e = dir ? '' : ext(f.filename), dep = f.filename.replace(/\/$/, '').split('/').length - 1;
     const ic = dir ? `<span class="fi" style="background:none;color:#8aa4f0;font-size:1.1rem"><i class="fa fa-folder${S.collapsed.has(f.filename) ? '' : '-open'}"></i></span>` : `<span class="fi">${esc(e.slice(0, 4))}</span>`;
-    return `<div class="frow${dir ? ' dir' : ''}${f.filename === S.active ? ' active' : ''}" data-act="${dir ? 'toggle-dir' : 'open-file'}" data-f="${esc(f.filename)}" data-ext="${esc(e)}" style="padding-left:${14 + dep * 18}px">${ic}<span class="nm">${esc(base(f.filename))}</span>${f.filename === S.entry ? '<i class="fa fa-caret-left entry"></i>' : ''}<button class="ico" data-act="file-menu" data-f="${esc(f.filename)}"><i class="fa fa-ellipsis"></i></button></div>`;
+    return `<div class="frow${dir ? ' dir' : ''}${f.filename === S.active ? ' active' : ''}" data-act="${dir ? 'toggle-dir' : 'open-file'}" data-f="${esc(f.filename)}" data-ext="${esc(e)}" style="padding-left:${(14 + dep * 18) / 16}rem">${ic}<span class="nm">${esc(base(f.filename))}</span>${f.filename === S.entry ? '<i class="fa fa-caret-left entry"></i>' : ''}<button class="ico" data-act="file-menu" data-f="${esc(f.filename)}"><i class="fa fa-ellipsis"></i></button></div>`;
   }).join('') || '<div class="frow" style="color:#888">No files</div>';
 }
 function popMenu(items, anchor) {
@@ -359,9 +359,9 @@ async function openEditor(id, explore = false) {
   if (!explore) { let dr = null; try { dr = JSON.parse(localStorage.getItem('taro-draft-' + id)); } catch { } if (dr && dr.t > (d.updatedAt || 0) && confirm('Restore unsaved changes from this device?')) { S.files = dr.files; S.entry = dr.entry || S.entry; } }
   Object.assign(S, { tabs: [], docs: {}, active: null, dirty: false, collapsed: new Set(), armed: false });
   show('editor'); ensureChrome(); makeCM(); applySettings();
-  $('#ed-title b').textContent = d.name; $('#save-state').hidden = explore; $('#vis').disabled = explore; $('#btn-exit-publish').hidden = explore;
+  $('#ed-title b').textContent = d.name; $('#save-state small').hidden = explore; $('#vis').disabled = explore; $('#btn-exit-publish').hidden = explore;
   const b = $('#ed-banner'); b.hidden = !explore; if (explore) b.innerHTML = `You are viewing <strong>${esc(d.name)}</strong>. Changes won't be saved. <a href="#" data-act="fork-current" style="color:#4c2e9e">Fork</a>`;
-  setState('saved'); closeSheet(); drawerClose(); $('#keys-1').hidden = false; $('#keys-2').hidden = true; $('#ctl-panel').hidden = true;
+  setState('saved'); closeSheet(); drawerClose(); findClose(true); $('#keys-1').hidden = false; $('#keys-2').hidden = true; $('#ctl-panel').hidden = true;
   openFile(S.entry);
 }
 const STATES = { saved: 'auto saved', saving: 'saving…', dirty: 'unsaved', err: 'save failed' };
@@ -473,6 +473,54 @@ function runCtl(c) {
 $('#keybar').addEventListener('pointerdown', e => e.preventDefault());
 $('#ed-main').addEventListener('pointerdown', e => { if (e.target.closest('#sel-bar')) e.preventDefault(); });
 
+/* ---------- find / replace ---------- */
+const FIND = { regex: false, case: false, word: false };
+let fMarks = [], fList = [], fIdx = -1, fTimer = 0;
+function fClear() { fMarks.forEach(m => m.clear()); fMarks = []; }
+function findRegex() {
+  const q = $('#fb-q').value; if (!q) return null;
+  let src = FIND.regex ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (FIND.word) src = '\\b(?:' + src + ')\\b';
+  try { return new RegExp(src, FIND.case ? 'g' : 'gi'); } catch { return null; }
+}
+function findRun(keep) {
+  const cm = S.cm; if (!cm) return; fClear(); fList = [];
+  const re = findRegex(); if (!re) { fIdx = -1; $('#fb-count').textContent = '0/0'; return; }
+  const text = cm.getValue(); let m;
+  while ((m = re.exec(text)) && fList.length < 5000) { if (!m[0]) { re.lastIndex++; continue; } fList.push([m.index, m.index + m[0].length]); }
+  fList.slice(0, 500).forEach(([a, b]) => fMarks.push(cm.markText(cm.posFromIndex(a), cm.posFromIndex(b), { className: 'cm-find' })));
+  if (!fList.length) { fIdx = -1; $('#fb-count').textContent = '0/0'; return; }
+  if (keep) { fIdx = Math.min(Math.max(fIdx, 0), fList.length - 1); $('#fb-count').textContent = (fIdx + 1) + '/' + fList.length; return; }
+  const cur = cm.indexFromPos(cm.getCursor('from')); fIdx = fList.findIndex(x => x[0] >= cur); if (fIdx < 0) fIdx = 0; findShow();
+}
+function findShow() {
+  const cm = S.cm, [a, b] = fList[fIdx], f = cm.posFromIndex(a), t = cm.posFromIndex(b);
+  cm.setSelection(f, t); cm.scrollIntoView({ from: f, to: t }, 90); $('#fb-count').textContent = (fIdx + 1) + '/' + fList.length;
+}
+function findStep(d) { if (!fList.length) return findRun(); fIdx = (fIdx + d + fList.length) % fList.length; findShow(); }
+const findLater = () => { if ($('#find-bar').hidden) return; clearTimeout(fTimer); fTimer = setTimeout(() => findRun(true), 250); };
+function findClose(quiet) { $('#find-bar').hidden = true; fClear(); fList = []; if (!quiet && S.cm) S.cm.focus(); }
+function findToggle() {
+  if (!S.cm) return; if (!$('#find-bar').hidden) return findClose();
+  $('#find-bar').hidden = false; $('#sel-bar').hidden = true;
+  const s = S.cm.getSelection(); if (s && !s.includes('\n') && s.length < 80) $('#fb-q').value = s;
+  const q = $('#fb-q'); q.focus(); q.select(); findRun();
+}
+function findRepText(a, b) {
+  const s = S.cm.getRange(S.cm.posFromIndex(a), S.cm.posFromIndex(b)), v = $('#fb-r').value; if (!FIND.regex) return v;
+  const re = findRegex(); return re ? s.replace(new RegExp(re.source, re.flags.replace('g', '')), v) : v;
+}
+function findReplace(all) {
+  const cm = S.cm; if (!cm || S.explore || !fList.length) return;
+  const items = all ? fList.slice() : [fList[fIdx]], reps = items.map(([a, b]) => findRepText(a, b));
+  cm.operation(() => { for (let i = items.length - 1; i >= 0; i--) cm.replaceRange(reps[i], cm.posFromIndex(items[i][0]), cm.posFromIndex(items[i][1])); });
+  if (!all) cm.setCursor(cm.posFromIndex(items[0][0] + reps[0].length));
+  findRun();
+}
+$('#fb-q').addEventListener('input', () => findRun());
+$('#fb-q').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); findStep(e.shiftKey ? -1 : 1); } });
+$('#find-bar').addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });
+
 /* ---------- auth + live sites ---------- */
 function open(m) { $('#overlay').hidden = false; $('#signer').hidden = m !== 'sign'; $('#loger').hidden = m !== 'log'; }
 const closeAll = () => { ['#signer', '#loger', '#overlay'].forEach(s => $(s).hidden = true); };
@@ -546,6 +594,11 @@ const ACT = {
   key: el => keyAct(el.dataset.k), 'key-cmd': el => { S.armed = !S.armed; el.classList.toggle('armed', S.armed); },
   'keys-more': () => { $('#keys-1').hidden = true; $('#keys-2').hidden = false; }, 'keys-back': () => { $('#keys-2').hidden = true; $('#keys-1').hidden = false; $('#ctl-panel').hidden = true; },
   'ctl-panel': () => { const p = $('#ctl-panel'); p.hidden = !p.hidden; }, ctl: el => { $('#ctl-panel').hidden = true; runCtl(el.dataset.c); },
+  'find-toggle': findToggle, 'find-close': () => findClose(),
+  'find-opt': el => { const o = el.dataset.o; FIND[o] = !FIND[o]; el.classList.toggle('on', FIND[o]); findRun(); },
+  'find-next': () => findStep(1), 'find-prev': () => findStep(-1),
+  'find-replace-toggle': () => { const r = $('#fb-rrow'); r.hidden = !r.hidden; if (!r.hidden) $('#fb-r').focus(); },
+  'find-rep': () => findReplace(false), 'find-repall': () => findReplace(true),
   /* settings */
   'open-settings': () => { drawerClose(); $('#set-search').value = ''; renderSettings(); $('#settings-view').hidden = false; },
   'settings-back': () => { $('#settings-view').hidden = true; },
