@@ -232,6 +232,7 @@ function startRunner() {
     }));
 }
 
+
 if (MODE === 'api' || MODE === 'dev') startApi();
 if (MODE === 'runner' || MODE === 'dev') startRunner();
 if (!['api', 'runner', 'dev'].includes(MODE)) { console.error('Set MODE to api or runner.'); process.exit(1); }
