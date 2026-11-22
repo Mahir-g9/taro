@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,7 +58,6 @@
 </head>
 <body>
 
-
 <nav id="nav">
   <div id="logo"><img id="logo-img" src="" alt="" hidden>Taro</div>
   <div id="buttons"></div>
@@ -113,14 +111,27 @@
     <button class="ico" id="btn-menu" data-act="menu" aria-label="Files"><i class="fa fa-bars"></i></button>
     <div id="ed-tabs" class="ed-tabs"></div>
     <span id="ed-title" class="ed-title">TARO / <b></b></span>
-    <button id="save-state" class="save-state" data-act="save-now" title="Tap to save now">
-      <i class="sdot"></i><small>auto saved</small>
+    <button id="save-state" class="save-state" data-act="find-toggle" title="Find">
+      <i class="fa fa-magnifying-glass"></i><small>auto saved</small>
     </button>
     <button class="run" id="btn-run" data-act="run" aria-label="Run"><i class="fa fa-play"></i></button>
   </header>
   <div id="ed-banner" class="ed-banner" hidden></div>
 
   <main id="ed-main">
+    <div id="find-bar" class="find-bar" hidden>
+      <div class="fb-row">
+        <button data-act="find-replace-toggle" title="Replace"><i class="fa fa-bars-staggered"></i></button>
+        <button data-act="find-opt" data-o="regex" title="Regex">.*</button>
+        <button data-act="find-opt" data-o="case" title="Match case">Aa</button>
+        <button data-act="find-opt" data-o="word" title="Whole word">Ab|</button>
+        <button data-act="find-prev" title="Previous"><i class="fa fa-arrow-up"></i></button>
+        <button data-act="find-next" title="Next"><i class="fa fa-arrow-down"></i></button>
+        <button data-act="find-close" title="Close"><i class="fa fa-xmark"></i></button>
+      </div>
+      <div class="fb-row"><input id="fb-q" placeholder="Find" autocomplete="off" autocapitalize="off" spellcheck="false"><span id="fb-count">0/0</span></div>
+      <div class="fb-row" id="fb-rrow" hidden><input id="fb-r" placeholder="Replace" autocomplete="off" autocapitalize="off" spellcheck="false"><button data-act="find-rep">Replace</button><button data-act="find-repall">All</button></div>
+    </div>
     <div id="ed-code"></div>
     <section id="ed-sheet" class="sheet" hidden>
       <div class="sheet-bar">
