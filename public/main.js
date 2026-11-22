@@ -276,9 +276,12 @@ function buildDoc(files, entry, o = {}) {
   const d = new DOMParser().parseFromString(main.content || '', 'text/html'), used = new Set([main.filename]);
   d.querySelectorAll('script[src]').forEach(s => { const f = get(resolvePath(main.filename, s.getAttribute('src'))); if (f) { used.add(f.filename); s.removeAttribute('src'); s.textContent = (f.content || '').replace(/<\/script/gi, '<\\/script'); } });
   d.querySelectorAll('link[rel~=stylesheet][href]').forEach(l => { const f = get(resolvePath(main.filename, l.getAttribute('href'))); if (f) { used.add(f.filename); const st = d.createElement('style'); st.textContent = f.content || ''; l.replaceWith(st); } });
-  fs.filter(f => !used.has(f.filename) && !f.filename.includes('/')).forEach(f => {   // old behaviour: root css/js without a <link>/<script>
+  // Old behaviour kept for simple projects: a root .js file with no <script> tag is added automatically.
+  // It is skipped when the page already has its own scripts, and for Node files (require / module.exports / process).
+  const ownScript = [...d.querySelectorAll('script')].some(s => !s.getAttribute('src')), NODEISH = /\brequire\s*\(|module\.exports|\bprocess\.(env|argv|version|exit)/;
+  fs.filter(f => !used.has(f.filename) && !f.filename.includes('/')).forEach(f => {
     if (f.filename.endsWith('.css')) { const s = d.createElement('style'); s.textContent = f.content || ''; d.head.appendChild(s); }
-    else if (f.filename.endsWith('.js')) { const s = d.createElement('script'); s.textContent = (f.content || '').replace(/<\/script/gi, '<\\/script'); d.body.appendChild(s); }
+    else if (f.filename.endsWith('.js') && !ownScript && !NODEISH.test(f.content || '')) { const s = d.createElement('script'); s.textContent = (f.content || '').replace(/<\/script/gi, '<\\/script'); d.body.appendChild(s); }
   });
   if (o.hook) d.head.insertAdjacentHTML('afterbegin', HOOK);
   if (o.eruda) d.body.insertAdjacentHTML('beforeend', '<script src="https://cdn.jsdelivr.net/npm/eruda@3.0.1/eruda.min.js"><\/script><script>eruda.init()<\/script>');
